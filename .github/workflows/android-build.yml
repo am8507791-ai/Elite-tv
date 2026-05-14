@@ -51,38 +51,58 @@ jobs:
           # Also keep a local copy just in case
           echo "{\"jdkPath\":\"$JAVA_HOME\",\"androidSdkPath\":\"$ANDROID_HOME\"}" > bubblewrap.json
           
-          # Create a clean twa-manifest.json
-          cat <<EOF > twa-manifest.json
-          {
-            "packageId": "com.elitecrickettv.twa",
-            "host": "ais-pre-gizl2nb4mtsupt34vxzox5-469280658518.asia-southeast1.run.app",
-            "name": "Elite Cricket TV",
-            "launcherName": "Elite Cricket",
-            "display": "standalone",
-            "themeColor": "#f06225",
-            "navigationColor": "#000000",
-            "backgroundColor": "#000000",
-            "startUrl": "/",
-            "iconUrl": "https://i.ibb.co/S800S80/Remove-background-project.png",
-            "maskableIconUrl": "https://i.ibb.co/S800S80/Remove-background-project.png",
-            "appVersion": "1.0.0",
-            "signingKey": {
-              "path": "./android.keystore",
-              "alias": "android"
-            },
-            "generatorApp": "bubblewrap-cli"
-          }
+          # Use a Node.js script to robustly initialize Bubblewrap
+          cat <<EOF > init_bubblewrap.cjs
+          const http = require('http');
+          const fs = require('fs');
+          const { execSync } = require('child_process');
+
+          const server = http.createServer((req, res) => {
+            if (req.url === '/manifest.json') {
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              // Serve a patched version of the manifest to ensure correct standalone display
+              const manifest = JSON.parse(fs.readFileSync('./public/manifest.json', 'utf8'));
+              manifest.start_url = "/";
+              res.end(JSON.stringify(manifest));
+            } else {
+              res.writeHead(404);
+              res.end();
+            }
+          }).listen(8089, () => {
+            console.log('Local server started on port 8089 for manifest delivery.');
+            try {
+              // 1. Initialize bubblewrap project using the local HTTP manifest
+              execSync('printf "n\\\\n" | npx -y @bubblewrap/cli init --manifest http://localhost:8089/manifest.json --nonInteractive', { stdio: 'inherit' });
+              
+              // 2. Patch twa-manifest.json with correct production host and downloaded icon
+              const twa = JSON.parse(fs.readFileSync('twa-manifest.json', 'utf8'));
+              twa.host = "ais-pre-gizl2nb4mtsupt34vxzox5-469280658518.asia-southeast1.run.app";
+              twa.appVersionName = "1.0.0";
+              twa.appVersionCode = 1;
+              twa.display = "standalone";
+              twa.signingKey = { path: "./android.keystore", alias: "android" };
+              fs.writeFileSync('twa-manifest.json', JSON.stringify(twa, null, 2));
+
+              // 3. Update the Android project files with the updated twa-manifest.json
+              console.log("Updating Android project scaffolding...");
+              execSync('printf "n\\\\n" | npx -y @bubblewrap/cli update --nonInteractive', { stdio: 'inherit' });
+              
+              console.log("Bubblewrap project successfully generated.");
+              process.exit(0);
+            } catch (err) {
+              console.error("Failed to generate Android project:", err);
+              process.exit(1);
+            }
+          });
           EOF
           
-          echo "Initializing Bubblewrap project..."
-          # We pipe 'n' followed by 'y' etc if prompts occur. 
-          # The first 'n' is for "Do you want Bubblewrap to install the JDK?"
-          printf 'n\n' | npx -y @bubblewrap/cli init --manifest twa-manifest.json --nonInteractive --directory .
+          node init_bubblewrap.cjs
           
           echo "Building APK..."
           # Build signed APK. 
           npx -y @bubblewrap/cli build --signingKeyPath ./android.keystore --signingKeyAlias android --signingKeyPassword android123 --signingKeystorePassword android123 --nonInteractive || \
           npx -y @bubblewrap/cli build --skipSigning --nonInteractive
+
 
       - name: Debug Output
         run: |
