@@ -1,0 +1,33 @@
+{
+  "packageId": "com.elitecrickettv.twa",
+  "host": "ais-pre-gizl2nb4mtsupt34vxzox5-469280658518.asia-southeast1.run.app",
+  "name": "Elite Cricket TV",
+  "launcherName": "Elite Cricket",
+  "display": "standalone",
+  "themeColor": "#f06225",
+  "navigationColor": "#000000",
+  "navigationColorDark": "#000000",
+  "navigationDividerColor": "#000000",
+  "navigationDividerColorDark": "#000000",
+  "backgroundColor": "#000000",
+  "enableNotifications": true,
+  "startUrl": "/",
+  "iconUrl": "https://i.ibb.co/S800S80/Remove-background-project.png",
+  "maskableIconUrl": "https://i.ibb.co/S800S80/Remove-background-project.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "android"
+  },
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://ais-pre-gizl2nb4mtsupt34vxzox5-469280658518.asia-southeast1.run.app/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "enableSiteSettingsShortcut": true,
+  "isRtl": false,
+  "orientation": "any",
+  "fingerprints": [],
+  "additionalTrustedOrigins": []
+}

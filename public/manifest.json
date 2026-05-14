@@ -1,0 +1,16 @@
+{
+  "short_name": "EliteCricket",
+  "name": "Elite Cricket TV",
+  "icons": [
+    {
+      "src": "https://i.ibb.co/S800S80/Remove-background-project.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#f97316",
+  "background_color": "#0f172a"
+}

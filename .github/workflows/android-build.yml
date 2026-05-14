@@ -1,0 +1,110 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build web app
+        run: npm run build
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Accept Android SDK Licenses
+        run: yes | sdkmanager --licenses || true
+
+      - name: Generate Keystore
+        run: |
+          keytool -genkeypair -v -keystore android.keystore -alias android -keyalg RSA -keysize 2048 -validity 10000 -storepass android123 -keypass android123 -dname "CN=Elite Cricket, OU=Elite, O=Elite, L=Elite, S=Elite, C=Elite"
+
+      - name: Generate APK with Bubblewrap
+        run: |
+          # Set memory limits for Gradle
+          export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx2g -Dorg.gradle.daemon=false"
+          
+          # Create Bubblewrap configuration in the home directory to prevent path prompts
+          mkdir -p ~/.bubblewrap
+          echo "{\"jdkPath\":\"$JAVA_HOME\",\"androidSdkPath\":\"$ANDROID_HOME\"}" > ~/.bubblewrap/config.json
+          
+          # Also keep a local copy just in case
+          echo "{\"jdkPath\":\"$JAVA_HOME\",\"androidSdkPath\":\"$ANDROID_HOME\"}" > bubblewrap.json
+          
+          # Create a clean twa-manifest.json
+          cat <<EOF > twa-manifest.json
+          {
+            "packageId": "com.elitecrickettv.twa",
+            "host": "ais-pre-gizl2nb4mtsupt34vxzox5-469280658518.asia-southeast1.run.app",
+            "name": "Elite Cricket TV",
+            "launcherName": "Elite Cricket",
+            "display": "standalone",
+            "themeColor": "#f06225",
+            "navigationColor": "#000000",
+            "backgroundColor": "#000000",
+            "startUrl": "/",
+            "iconUrl": "https://i.ibb.co/S800S80/Remove-background-project.png",
+            "maskableIconUrl": "https://i.ibb.co/S800S80/Remove-background-project.png",
+            "appVersion": "1.0.0",
+            "signingKey": {
+              "path": "./android.keystore",
+              "alias": "android"
+            },
+            "generatorApp": "bubblewrap-cli"
+          }
+          EOF
+          
+          echo "Initializing Bubblewrap project..."
+          # We pipe 'n' followed by 'y' etc if prompts occur. 
+          # The first 'n' is for "Do you want Bubblewrap to install the JDK?"
+          printf 'n\n' | npx -y @bubblewrap/cli init --manifest twa-manifest.json --nonInteractive --directory .
+          
+          echo "Building APK..."
+          # Build signed APK. 
+          npx -y @bubblewrap/cli build --signingKeyPath ./android.keystore --signingKeyAlias android --signingKeyPassword android123 --signingKeystorePassword android123 --nonInteractive || \
+          npx -y @bubblewrap/cli build --skipSigning --nonInteractive
+
+      - name: Debug Output
+        run: |
+          echo "Current directory contents:"
+          ls -la
+          echo "Finding all APK files:"
+          find . -name "*.apk"
+
+      - name: Find and Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: |
+            **/*.apk
+          if-no-files-found: error
+
+      - name: Publish to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Elite Cricket TV App Release (Build ${{ github.run_number }})"
+          tag_name: "v1.0.${{ github.run_number }}"
+          files: "**/*.apk"
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
