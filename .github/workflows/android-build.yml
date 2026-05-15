@@ -43,13 +43,11 @@ jobs:
 
       - name: Generate APK with Capacitor
         run: |
-          # Create assets directory and copy store icon so capacitor-assets can find it
+          # Create assets directory and download the exact icon the user asked for
           mkdir -p assets
-          if [ -f "store_icon.png" ]; then
-            cp store_icon.png assets/icon.png
-            cp store_icon.png assets/splash.png
-            cp store_icon.png assets/logo.png
-          fi
+          curl -sL "https://i.ibb.co/S800S80/Remove-background-project.png" -o assets/icon.png
+          curl -sL "https://i.ibb.co/S800S80/Remove-background-project.png" -o assets/splash.png
+          curl -sL "https://i.ibb.co/S800S80/Remove-background-project.png" -o assets/logo.png
 
           # Delete potentially corrupt tracked android folder and create fresh
           rm -rf android
@@ -65,6 +63,8 @@ jobs:
             # Remove default vector icons so android doesn't prefer them over our generated PNGs
             rm -f android/app/src/main/res/drawable/ic_launcher_background.xml
             rm -f android/app/src/main/res/drawable-v24/ic_launcher_foreground.xml
+            rm -f android/app/src/main/res/values/ic_launcher_background.xml
+            rm -rf android/app/src/main/res/mipmap-anydpi-v26
           fi
           
           # Navigate to android folder and build APK
