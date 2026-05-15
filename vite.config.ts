@@ -21,14 +21,15 @@ export default defineConfig(({mode}) => {
           theme_color: '#f06225',
           icons: [
             {
-              src: 'https://i.ibb.co/S800S80/Remove-background-project.png',
+              src: 'icon.png',
               sizes: '192x192',
               type: 'image/png'
             },
             {
-              src: 'https://i.ibb.co/S800S80/Remove-background-project.png',
+              src: 'icon.png',
               sizes: '512x512',
-              type: 'image/png'
+              type: 'image/png',
+              purpose: 'any maskable'
             }
           ]
         },

@@ -43,10 +43,21 @@ jobs:
 
       - name: Generate APK with Capacitor
         run: |
+          # Create assets directory and copy store icon so capacitor-assets can find it
+          mkdir -p assets
+          if [ -f "store_icon.png" ]; then
+            cp store_icon.png assets/icon.png
+          fi
+
           # Delete potentially corrupt tracked android folder and create fresh
           rm -rf android
           npx cap add android
           npx cap sync android
+          
+          # Generate icons and splash screens
+          if [ -d "assets" ]; then
+            npx @capacitor/assets generate --android || true
+          fi
           
           # Navigate to android folder and build APK
           cd android
