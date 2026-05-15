@@ -58,13 +58,13 @@ jobs:
           if [ -d "assets" ]; then
             echo "Installing @capacitor/assets..."
             npm install -D @capacitor/assets
-            npx @capacitor/assets generate --android || echo "Capacitor assets generation failed"
+            npx @capacitor/assets generate --android --iconBackgroundColor '#0A0E17' --splashBackgroundColor '#0A0E17' || echo "Capacitor assets generation failed"
             
             # Remove default vector icons so android doesn't prefer them over our generated PNGs
             rm -f android/app/src/main/res/drawable/ic_launcher_background.xml
             rm -f android/app/src/main/res/drawable-v24/ic_launcher_foreground.xml
             rm -f android/app/src/main/res/values/ic_launcher_background.xml
-            rm -rf android/app/src/main/res/mipmap-anydpi-v26
+            # keeping mipmap-anydpi-v26 as it points to the generated PNGs
           fi
           
           # Navigate to android folder and build APK
