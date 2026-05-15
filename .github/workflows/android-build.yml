@@ -43,14 +43,13 @@ jobs:
 
       - name: Generate APK with Capacitor
         run: |
-          # Build Capacitor app
+          # Delete potentially corrupt tracked android folder and create fresh
+          rm -rf android
+          npx cap add android
           npx cap sync android
           
           # Navigate to android folder and build APK
           cd android
-          
-          # Fix corrupt gradle wrapper if exists
-          wget -q -O gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.14.3/gradle/wrapper/gradle-wrapper.jar
           
           # Set executable permissions for gradlew
           chmod +x ./gradlew
