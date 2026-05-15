@@ -41,28 +41,28 @@ jobs:
         run: |
           keytool -genkeypair -v -keystore android.keystore -alias android -keyalg RSA -keysize 2048 -validity 10000 -storepass android123 -keypass android123 -dname "CN=Elite Cricket, OU=Elite, O=Elite, L=Elite, S=Elite, C=Elite"
 
-      - name: Generate APK with Bubblewrap
+      - name: Generate APK with Capacitor
         run: |
-          # Set memory limits for Gradle
-          export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx2g -Dorg.gradle.daemon=false"
+          # Build Capacitor app
+          npx cap sync android
           
-          # Create Bubblewrap configuration in the home directory
-          mkdir -p ~/.bubblewrap
-          echo "{\"jdkPath\":\"$JAVA_HOME\",\"androidSdkPath\":\"$ANDROID_HOME\"}" > ~/.bubblewrap/config.json
+          # Navigate to android folder and build APK
+          cd android
           
-          # Execute bubblewrap update to generate project files
-          echo "Generating Android project..."
-          echo "1.0.0" | npx -y @bubblewrap/cli update --nonInteractive
+          # Set executable permissions for gradlew
+          chmod +x ./gradlew
           
-          echo "Building Unsigned APK..."
-          npx -y @bubblewrap/cli build --skipSigning --nonInteractive || true
+          # Build release APK
+          ./gradlew assembleRelease
+          
+          cd ..
           
           echo "Locating build tools..."
           BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/* | sort -r | head -n 1)
           
-          echo "Zipaligning and Signing APK..."
-          # Find the unsigned APK
-          UNSIGNED_APK=$(find . -name "app-release-unsigned.apk" | head -n 1)
+          echo "Signing APK..."
+          # The unsigned APK is built at android/app/build/outputs/apk/release/app-release-unsigned.apk
+          UNSIGNED_APK="android/app/build/outputs/apk/release/app-release-unsigned.apk"
           
           if [ -f "$UNSIGNED_APK" ]; then
             mkdir -p final_apk
@@ -70,20 +70,13 @@ jobs:
             $BUILD_TOOLS_DIR/zipalign -p -f 4 "$UNSIGNED_APK" final_apk/app-aligned.apk
             # Sign
             $BUILD_TOOLS_DIR/apksigner sign --ks android.keystore --ks-pass pass:android123 --ks-key-alias android --key-pass pass:android123 --out final_apk/Elite-Cricket-TV.apk final_apk/app-aligned.apk
-            # Clean up intermediate aligned apk
+            # Clean up
             rm final_apk/app-aligned.apk
             echo "Successfully generated and signed Elite-Cricket-TV.apk!"
           else
-            echo "Error: Could not find app-release-unsigned.apk"
+            echo "Error: Could not find $UNSIGNED_APK"
             exit 1
           fi
-
-      - name: Debug Output
-        run: |
-          echo "Current directory contents:"
-          ls -la
-          echo "Listing final APKs:"
-          ls -la final_apk/
 
       - name: Find and Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -91,13 +84,3 @@ jobs:
           name: Elite-Cricket-TV-App
           path: final_apk/Elite-Cricket-TV.apk
           if-no-files-found: error
-
-      - name: Publish to GitHub Releases
-        uses: softprops/action-gh-release@v2
-        with:
-          name: "Elite Cricket TV App Release (Build ${{ github.run_number }})"
-          tag_name: "v1.0.${{ github.run_number }}"
-          files: "final_apk/Elite-Cricket-TV.apk"
-          make_latest: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
