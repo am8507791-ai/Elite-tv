@@ -3,6 +3,7 @@ import { Channel, CompletedMatch, Recommendation } from '../types';
 import { ChevronLeft, Maximize2, Tv, Film, Radio, Play, Share2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useToast } from './ToastProvider';
+import Hls from 'hls.js';
 
 interface PlayerProps {
   key?: React.Key;
@@ -18,14 +19,8 @@ interface PlayerProps {
   onBack: () => void;
 }
 
-declare global {
-  interface Window {
-    jwplayer: any;
-  }
-}
-
 export function Player({ item, recommendations, onSelect, onBack }: PlayerProps) {
-  const jwRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const { title, streamUrl, iframeUrl, id, type } = item;
   const isLive = !!streamUrl;
   const { showToast } = useToast();
@@ -53,63 +48,54 @@ export function Player({ item, recommendations, onSelect, onBack }: PlayerProps)
   };
 
   useEffect(() => {
-    let playerInstance: any = null;
+    if (!streamUrl || !videoRef.current) return;
+    
+    let hls: Hls | null = null;
+    const video = videoRef.current;
 
-    if (streamUrl && window.jwplayer) {
-      playerInstance = window.jwplayer("jwplayer-container").setup({
-        playlist: [{ 
-          file: streamUrl, 
-          image: "https://i.postimg.cc/yYwqPn4L/In-Shot-20260430-203251896.jpg", 
-          type: "hls" 
-        }],
-        logo: { 
-          file: "https://i.postimg.cc/3rpzw35P/file-00000000b5b07207aebb46f0463a8fc3.png", 
-          position: "top-left", 
-          hide: false, 
-          margin: 10 
-        },
-        width: "100%", 
-        height: "100%", 
-        autostart: true, 
-        stretching: "uniform", 
-        playbackRateControls: true,
-        skin: {
-          colors: {
-            active: "#ef4444", // Red color for seek bar and progress
-            icons: "#ffffff",
-            text: "#ffffff"
+    if (Hls.isSupported()) {
+      hls = new Hls({
+        capLevelToPlayerSize: true,
+        maxBufferLength: 30,
+      });
+      hls.loadSource(streamUrl);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        video.play().catch(e => console.log('Autoplay prevented', e));
+      });
+      hls.on(Hls.Events.ERROR, (event, data) => {
+        if (data.fatal) {
+          switch (data.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              console.log('Network error encountered, trying to recover...', data);
+              hls?.startLoad();
+              break;
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              console.log('Media error encountered, trying to recover...', data);
+              hls?.recoverMediaError();
+              break;
+            default:
+              // Cannot recover
+              hls?.destroy();
+              break;
           }
         }
       });
-
-      playerInstance.on('ready', () => {
-        // Add Forward 10s button
-        playerInstance.addButton(
-          "https://img.icons8.com/ios-filled/50/ffffff/fast-forward.png",
-          "Forward 10s",
-          () => playerInstance.seek(playerInstance.getPosition() + 10),
-          "forward10"
-        );
-        // Add Rewind 10s button
-        playerInstance.addButton(
-          "https://img.icons8.com/ios-filled/50/ffffff/rewind.png",
-          "Rewind 10s",
-          () => playerInstance.seek(playerInstance.getPosition() - 10),
-          "rewind10"
-        );
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      // For Safari and Native HLS support on iOS Devices
+      video.src = streamUrl;
+      video.addEventListener('loadedmetadata', () => {
+        video.play().catch(e => console.log('Autoplay prevented', e));
       });
     }
 
     return () => {
-      if (playerInstance) {
-        try {
-          if (playerInstance.getState && playerInstance.getState() === 'playing') {
-            playerInstance.stop();
-          }
-          playerInstance.remove();
-        } catch (e) {
-          // Silent fail for cleanup errors during unmount
-        }
+      if (hls) {
+        hls.destroy();
+      }
+      if (video) {
+        video.removeAttribute('src');
+        video.load();
       }
     };
   }, [streamUrl]);
@@ -142,7 +128,14 @@ export function Player({ item, recommendations, onSelect, onBack }: PlayerProps)
 
       <div className="w-full bg-black aspect-video relative group border-b border-border shrink-0">
         {streamUrl ? (
-          <div id="jwplayer-container" ref={jwRef} className="w-full h-full" />
+          <video 
+            ref={videoRef} 
+            className="w-full h-full object-contain" 
+            controls 
+            playsInline
+            autoPlay
+            poster="https://i.postimg.cc/yYwqPn4L/In-Shot-20260430-203251896.jpg"
+          />
         ) : iframeUrl ? (
           <iframe 
             src={iframeUrl} 
