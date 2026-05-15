@@ -11,15 +11,17 @@
   "navigationDividerColor": "#000000",
   "navigationDividerColorDark": "#000000",
   "backgroundColor": "#000000",
+  "enableNotifications": true,
   "startUrl": "/",
   "iconUrl": "https://i.ibb.co/S800S80/Remove-background-project.png",
   "maskableIconUrl": "https://i.ibb.co/S800S80/Remove-background-project.png",
+  "splashScreenFadeOutDuration": 300,
   "signingKey": {
     "path": "./android.keystore",
     "alias": "android"
   },
   "appVersionName": "1.0.0",
-  "appVersionCode": 2,
+  "appVersionCode": 3,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
   "fallbackType": "customtabs",

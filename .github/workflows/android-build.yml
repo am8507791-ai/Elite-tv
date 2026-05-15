@@ -48,30 +48,7 @@ jobs:
           mkdir -p ~/.bubblewrap
           echo "{\"jdkPath\":\"$JAVA_HOME\",\"androidSdkPath\":\"$ANDROID_HOME\"}" > ~/.bubblewrap/config.json
           
-          # Write twa-manifest.json with production host and icon URLs
-          cat <<EOF > twa-manifest.json
-          {
-            "packageId": "com.elitecrickettv.twa",
-            "host": "ais-pre-suwgdfci5i557of6m6e6y5-751326443421.asia-southeast1.run.app",
-            "name": "Elite Cricket TV",
-            "launcherName": "Elite Cricket",
-            "display": "standalone",
-            "themeColor": "#f06225",
-            "navigationColor": "#000000",
-            "backgroundColor": "#000000",
-            "startUrl": "/",
-            "iconUrl": "https://i.ibb.co/S800S80/Remove-background-project.png",
-            "maskableIconUrl": "https://i.ibb.co/S800S80/Remove-background-project.png",
-            "appVersionName": "1.0.0",
-            "appVersionCode": 1,
-            "signingKey": {
-              "path": "./android.keystore",
-              "alias": "android"
-            },
-            "generatorApp": "bubblewrap-cli"
-          }
-          EOF
-          
+          # Execute bubblewrap update to generate project files using the repository's twa-manifest.json
           echo "Generating Android project..."
           echo "1.0.0" | npx -y @bubblewrap/cli update --nonInteractive
           
